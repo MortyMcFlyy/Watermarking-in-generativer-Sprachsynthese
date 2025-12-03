@@ -5,6 +5,7 @@ from audioseal import AudioSeal
 
 def prepare_audio(audio_path):
     #laut github 16kHz, aber hier 44.1kHz um bessere Kompatibilität zu gewährleisten scheint immernoch zu funktionieren
+    # testen ob andere khz anfälliger sind gegenüber watermarking zerstörungsverfahren
     wav, sr = librosa.load(audio_path, sr=44100)
     wav_tensor = torch.from_numpy(wav).unsqueeze(0).unsqueeze(0)
     return wav_tensor, sr
