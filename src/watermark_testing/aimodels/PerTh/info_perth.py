@@ -52,6 +52,7 @@ def evaluate_watermark():
 
     # Calculate quality metrics
     metrics = calculate_audio_metrics(original, watermarked)
+    #gibt einen error aufgrund unterscheidlicher Längen der Audiodateien(kann ja nicht? Issue im github gemeldet)
     print(f"SNR: {metrics['snr']:.2f} dB")
     print(f"PSNR: {metrics['psnr']:.2f} dB")
 
