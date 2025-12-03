@@ -5,13 +5,16 @@ from perth.utils import calculate_audio_metrics, plot_audio_comparison
 from perth.perth_net.perth_net_implicit.perth_watermarker import PerthImplicitWatermarker
 
 
+
+
 def apply_watermark(input_path, output_path):
     """Load audio file, apply watermark, and save"""
     # Load audio file
     wav, sr = librosa.load(input_path, sr=None)
 
-    # Initialize watermarker
+    # Initialize watermarker (implicit)
     watermarker = PerthImplicitWatermarker()
+   
 
     # Apply watermark
     watermarked_audio = watermarker.apply_watermark(wav, watermark=None, sample_rate=sr)
