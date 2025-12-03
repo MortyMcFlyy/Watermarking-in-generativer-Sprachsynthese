@@ -1,0 +1,16 @@
+#AudioSeal:
+audioseal
+Python >= 3.8
+Pytorch >= 1.13.0
+Omegaconf
+Julius
+Numpy
+
+
+
+#PerTh:
+resemble_perth
+matplotlib
+librosa
+torch
+torchaudio
