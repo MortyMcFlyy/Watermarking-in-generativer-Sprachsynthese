@@ -48,6 +48,28 @@ def upload_audio():
         'path': filepath
     }), 200
 
+@app.route('/watermark/embed', methods=['POST'])
+def embed():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Keine Datei gefunden'}), 400
+    
+    file = request.files['audio']
+    
+    if file.filename == '':
+        return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+    
+    input_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(input_path)
+    
+    audio_tensor, sr = prepare_audio(input_path)
+    watermarked_audio = embed_watermark(audio_tensor, sr)
+    
+    output_filename = f"watermarked_{file.filename}"
+    output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+    save_audio(watermarked_audio, sr, output_path)
+    
+    return send_file(output_path, as_attachment=True, download_name=output_filename)
+
 # App starten
 if __name__ == '__main__':
     app.run(debug=True, host='localhost', port=5000)
