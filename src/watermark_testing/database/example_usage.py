@@ -1,5 +1,5 @@
-from database import init_db, SessionLocal
-from repositories import UserRepository, AudioFileRepository
+from database.database import init_db, SessionLocal
+from database.repositories import UserRepository, AudioFileRepository
 from werkzeug.security import generate_password_hash
 
 
