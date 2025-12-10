@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Watermarking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 5px;
+            display: none;
+        }
+        .error {
+            background-color: #ffebee !important;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1> Audio Watermarking Tool</h1>
+        
+        <div class="upload-section">
+            <h3>Watermark einbetten</h3>
+            <input type="file" id="audioFile" accept="audio/*">
+            <br>
+            <button onclick="embedWatermark()">Watermark hinzufügen</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function embedWatermark() {
+            const fileInput = document.getElementById('audioFile');
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = 'Bitte wähle eine Audio-Datei aus!';
+                resultDiv.className = 'error';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', fileInput.files[0]);
+
+            resultDiv.innerHTML = '⏳ Watermark wird eingebettet...';
+            resultDiv.className = '';
+            resultDiv.style.display = 'block';
+
+            fetch('/watermark/embed', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                // Erstelle Download-Link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'watermarked_' + fileInput.files[0].name;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                resultDiv.innerHTML = '✅ Watermark erfolgreich eingebettet! Download startet...';
+            })
+            .catch(error => {
+                resultDiv.innerHTML = '❌ Fehler: ' + error;
+                resultDiv.className = 'error';
+            });
+        }
+    </script>
+</body>
+</html>
