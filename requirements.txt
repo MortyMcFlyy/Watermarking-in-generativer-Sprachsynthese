@@ -19,3 +19,10 @@ torchaudio
 sqlalchemy>=2.0.0
 alembic
 psycopg2-binary  # Für PostgreSQL (oder sqlite3 für SQLite)
+
+
+#Flask
+flask>=3.0.0
+flask-cors
+werkzeug
+python-multipart
