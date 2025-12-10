@@ -9,9 +9,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, save_audio
 
 # Flask App 
-app = Flask(__name__, 
-            template_folder='../templates',
-            static_folder='../static')
+app = Flask(__name__)
 
 # Upload-Ordner erstellen
 UPLOAD_FOLDER = 'uploads'
