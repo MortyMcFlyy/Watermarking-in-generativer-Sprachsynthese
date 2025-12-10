@@ -8,8 +8,10 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, save_audio
 
-# Flask App mit Templates-Ordner
-app = Flask(__name__, template_folder='../templates')
+# Flask App 
+app = Flask(__name__, 
+            template_folder='../templates',
+            static_folder='../static')
 
 # Upload-Ordner erstellen
 UPLOAD_FOLDER = 'uploads'
@@ -27,8 +29,7 @@ def health():
 # Neuer Endpoint: Audio-Datei hochladen
 
 #testen mit:
-#curl -X POST -F "audio=@F:\Uni\8tes Semester\Bachelorarbeit\Bachelor_Arbeit\einleitung.wav" 
-# http://localhost:5000/upload
+#curl -X POST -F "audio=@F:\Uni\8tes Semester\Bachelorarbeit\Bachelor_Arbeit\einleitung.wav" http://localhost:5000/upload
 @app.route('/upload', methods=['POST'])
 def upload_audio():
     if 'audio' not in request.files:
