@@ -6,7 +6,7 @@ from pathlib import Path
 # Füge den Parent-Ordner zum Path hinzu
 sys.path.append(str(Path(__file__).parent.parent))
 
-from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, save_audio
+from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, detect_watermark, save_audio
 
 # Flask App 
 app = Flask(__name__)
@@ -68,6 +68,45 @@ def embed():
     save_audio(watermarked_audio, sr, output_path)
     
     return send_file(output_path, as_attachment=True, download_name=output_filename)
+
+# NEU: Detection-Endpoint
+@app.route('/watermark/detect', methods=['POST'])
+def detect():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Keine Datei gefunden'}), 400
+    
+    file = request.files['audio']
+    
+    if file.filename == '':
+        return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+    
+    input_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(input_path)
+    
+    try:
+        audio_tensor, sr = prepare_audio(input_path)
+        confidence, message = detect_watermark(audio_tensor, sr)
+        
+        # Konvertiere Tensor zu Python Float/List HIER im Endpoint
+        if hasattr(confidence, 'cpu'):  # Check ob es ein Tensor ist
+            confidence = float(confidence.cpu().detach().numpy())
+        else:
+            confidence = float(confidence)
+        
+        if hasattr(message, 'cpu'):  # Check ob es ein Tensor ist
+            message = message.cpu().detach().numpy().tolist()
+        
+        # Confidence als Prozentage formatieren
+        confidence_percent = confidence * 100
+        
+        return jsonify({
+            'detected': confidence_percent >= 50,
+            'confidence': confidence_percent,
+            'message': message,
+            'filename': file.filename
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # App starten
 if __name__ == '__main__':
