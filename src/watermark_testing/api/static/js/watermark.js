@@ -1,20 +1,15 @@
 function embedWatermark() {
     const fileInput = document.getElementById('audioFile');
-    const resultDiv = document.getElementById('result');
     
     if (!fileInput.files[0]) {
-        resultDiv.innerHTML = 'Bitte wähle eine Audio-Datei aus!';
-        resultDiv.className = 'error';
-        resultDiv.style.display = 'block';
+        showResult('❌ Bitte wähle eine Audio-Datei aus!', true);
         return;
     }
 
     const formData = new FormData();
     formData.append('audio', fileInput.files[0]);
 
-    resultDiv.innerHTML = '⏳ Watermark wird eingebettet...';
-    resultDiv.className = '';
-    resultDiv.style.display = 'block';
+    showResult('⏳ Watermark wird eingebettet...');
 
     fetch('/watermark/embed', {
         method: 'POST',
@@ -22,7 +17,6 @@ function embedWatermark() {
     })
     .then(response => response.blob())
     .then(blob => {
-        // Erstelle Download-Link
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -31,10 +25,9 @@ function embedWatermark() {
         a.click();
         a.remove();
         
-        resultDiv.innerHTML = '✅ Watermark erfolgreich eingebettet! Download startet...';
+        showResult('✅ Watermark erfolgreich eingebettet! Download startet...');
     })
     .catch(error => {
-        resultDiv.innerHTML = '❌ Fehler: ' + error;
-        resultDiv.className = 'error';
+        showResult('❌ Fehler: ' + error, true);
     });
 }
