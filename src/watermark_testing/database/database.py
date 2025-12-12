@@ -1,13 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from pathlib import Path
 from .models import Base
 
 # ==========================================
 # DATENBANK-KONFIGURATION
 # ==========================================
 
-# SQLite für lokale Entwicklung (ändere zu PostgreSQL für Produktion)
-DATABASE_URL = "sqlite:///./watermark_testing.db"
+# Absoluter Pfad zur DB-Datei (im database-Ordner)
+DB_DIR = Path(__file__).parent
+DATABASE_URL = f"sqlite:///{DB_DIR}/watermark_testing.db"
+
 # Für PostgreSQL: "postgresql://user:password@localhost/dbname"
 
 # ==========================================
@@ -23,7 +26,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db():
     """Initialisiert die Datenbank (erstellt alle Tabellen)"""
     Base.metadata.create_all(bind=engine)
-    print(" Datenbank initialisiert")
+    print(f"✓ Datenbank initialisiert: {DATABASE_URL}")
 
 
 def get_db():
