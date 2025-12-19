@@ -3,10 +3,16 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
+
 # Füge den Parent-Ordner zum Path hinzu
 sys.path.append(str(Path(__file__).parent.parent))
 
+# AudioSeal Imports
 from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, detect_watermark, save_audio
+# PerTh Imports
+from aimodels.PerTh.perth_handler import embed_perth_watermark, detect_perth_watermark
+
 from database.database import init_db, SessionLocal
 from database.repositories import UserRepository, AudioFileRepository
 from services.audio_service import AudioService
@@ -109,29 +115,39 @@ def upload_audio():
 def embed():
     """
     Embed Watermark in Audio
-    - Upload + Watermarking
+    - Upload + Watermarking (AudioSeal oder PerTh)
     - Speichert Original UND Watermarked in DB
     """
     if 'audio' not in request.files:
         return jsonify({'error': 'Keine Datei gefunden'}), 400
     
     file = request.files['audio']
+    method = request.form.get('method', 'audioseal')  # Default: AudioSeal
     
     if file.filename == '':
         return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+    
+    if method not in ['audioseal', 'perth']:
+        return jsonify({'error': 'Ungültige Methode. Wähle "audioseal" oder "perth"'}), 400
     
     try:
         # 1. Original-Datei speichern
         filename, input_path = AudioService.save_uploaded_file(file, UPLOAD_FOLDER)
         original_metadata = AudioService.get_audio_metadata(input_path)
         
-        # 2. Watermark einbetten
-        audio_tensor, sr = prepare_audio(input_path)
-        watermarked_audio = embed_watermark(audio_tensor, sr)
-        
-        output_filename = f"watermarked_{filename}"
+        # 2. Watermark einbetten - je nach Methode
+        output_filename = f"watermarked_{method}_{filename}"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
-        save_audio(watermarked_audio, sr, output_path)
+        
+        if method == 'audioseal':
+            audio_tensor, sr = prepare_audio(input_path)
+            watermarked_audio = embed_watermark(audio_tensor, sr)
+            save_audio(watermarked_audio, sr, output_path)
+            watermark_type = 'AudioSeal'
+            
+        elif method == 'perth':
+            embed_perth_watermark(input_path, output_path)
+            watermark_type = 'PerTh'
         
         watermarked_metadata = AudioService.get_audio_metadata(output_path)
         
@@ -161,7 +177,7 @@ def embed():
             sample_rate=watermarked_metadata['sample_rate'],
             duration=watermarked_metadata['duration'],
             has_watermark=True,
-            watermark_type='AudioSeal'
+            watermark_type=watermark_type
         )
         
         return send_file(output_path, as_attachment=True, download_name=output_filename)
@@ -177,37 +193,51 @@ def embed():
 def detect():
     """
     Detect Watermark in Audio
-    - Upload + Detection
+    - Upload + Detection (AudioSeal oder PerTh)
     - Speichert Detection-Ergebnis in DB
     """
     if 'audio' not in request.files:
         return jsonify({'error': 'Keine Datei gefunden'}), 400
     
     file = request.files['audio']
+    method = request.form.get('method', 'audioseal')  # Default: AudioSeal
     
     if file.filename == '':
         return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+    
+    if method not in ['audioseal', 'perth']:
+        return jsonify({'error': 'Ungültige Methode. Wähle "audioseal" oder "perth"'}), 400
     
     try:
         # 1. Datei speichern
         filename, input_path = AudioService.save_uploaded_file(file, UPLOAD_FOLDER)
         metadata = AudioService.get_audio_metadata(input_path)
         
-        # 2. Detection durchführen
-        audio_tensor, sr = prepare_audio(input_path)
-        confidence, message = detect_watermark(audio_tensor, sr)
-        
-        # Tensor zu Float konvertieren
-        if hasattr(confidence, 'cpu'):
-            confidence = float(confidence.cpu().detach().numpy())
-        else:
-            confidence = float(confidence)
-        
-        if hasattr(message, 'cpu'):
-            message = message.cpu().detach().numpy().tolist()
-        
-        confidence_percent = confidence * 100
-        detected = confidence_percent >= 50
+        # 2. Detection durchführen - je nach Methode
+        if method == 'audioseal':
+            audio_tensor, sr = prepare_audio(input_path)
+            confidence, message = detect_watermark(audio_tensor, sr)
+            
+            # Tensor zu Float konvertieren
+            if hasattr(confidence, 'cpu'):
+                confidence = float(confidence.cpu().detach().numpy())
+            else:
+                confidence = float(confidence)
+            
+            if hasattr(message, 'cpu'):
+                message = message.cpu().detach().numpy().tolist()
+            
+            confidence_percent = confidence * 100
+            detected = bool(confidence_percent >= 50)  # Explizit zu bool
+            watermark_type = 'AudioSeal'
+            watermark_data = None  # AudioSeal gibt kein extrahiertes Watermark zurück
+            
+        elif method == 'perth':
+            watermark, detected = detect_perth_watermark(input_path)
+            detected = bool(detected)  # Explizit zu Python bool konvertieren
+            watermark_type = 'PerTh'
+            watermark_data = watermark
+            # PerTh hat keinen Confidence Score - nur detected True/False
         
         # 3. In DB speichern mit Detection-Info
         db = get_db_session()
@@ -222,16 +252,30 @@ def detect():
             sample_rate=metadata['sample_rate'],
             duration=metadata['duration'],
             has_watermark=detected,
-            watermark_type='AudioSeal' if detected else None
+            watermark_type=watermark_type if detected else None
         )
         
-        return jsonify({
+        response_data = {
             'detected': detected,
-            'confidence': confidence_percent,
-            'message': message,
             'filename': filename,
-            'audio_id': audio_file.id
-        }), 200
+            'audio_id': audio_file.id,
+            'method': watermark_type
+        }
+        
+        # Methoden-spezifische Daten
+        if method == 'perth':
+            # PerTh: Nur Watermark-Daten, kein Confidence
+            if watermark_data is not None:
+                if isinstance(watermark_data, np.ndarray):
+                    response_data['watermark'] = watermark_data.tolist()
+                else:
+                    response_data['watermark'] = watermark_data
+        elif method == 'audioseal':
+            # AudioSeal: Hat Confidence Score
+            response_data['confidence'] = confidence_percent
+            response_data['message'] = message
+        
+        return jsonify(response_data), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

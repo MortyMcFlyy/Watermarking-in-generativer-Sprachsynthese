@@ -151,7 +151,7 @@
         }
 
         /* Form Controls */
-        .form-control {
+        .form-control, .form-select {
             border: 2px solid var(--wave);
             border-radius: 8px;
             padding: 12px;
@@ -159,7 +159,7 @@
             background: #f8fafc;
         }
 
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--water-blue);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
             background: white;
@@ -215,6 +215,25 @@
             font-weight: 600;
             margin-bottom: 20px;
         }
+
+        .method-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        .badge-audioseal {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+        }
+
+        .badge-perth {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            color: #9f1239;
+        }
     </style>
 </head>
 <body>
@@ -245,7 +264,18 @@
             <div class="tab-pane fade show active" id="embed" role="tabpanel">
                 <div class="upload-section">
                     <h5>Audio Watermark Embedding</h5>
+                    
+                    <!-- Watermarking Method Selection -->
                     <div class="mb-4">
+                        <label for="embedMethod" class="form-label fw-semibold">Watermarking Method</label>
+                        <select id="embedMethod" class="form-select">
+                            <option value="audioseal" selected>AudioSeal</option>
+                            <option value="perth">PerTh (Implicit)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="audioFile" class="form-label fw-semibold">Audio File</label>
                         <input type="file" id="audioFile" accept="audio/*" class="form-control">
                     </div>
                     <button class="btn btn-custom text-white btn-lg" onclick="embedWatermark()">
@@ -259,7 +289,18 @@
             <div class="tab-pane fade" id="detect" role="tabpanel">
                 <div class="upload-section">
                     <h5>Watermark Detection & Analysis</h5>
+                    
+                    <!-- Detection Method Selection -->
                     <div class="mb-4">
+                        <label for="detectMethod" class="form-label fw-semibold">Detection Method</label>
+                        <select id="detectMethod" class="form-select">
+                            <option value="audioseal" selected>AudioSeal</option>
+                            <option value="perth">PerTh (Implicit)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="detectFile" class="form-label fw-semibold">Audio File</label>
                         <input type="file" id="detectFile" accept="audio/*" class="form-control">
                     </div>
                     <button class="btn btn-custom btn-detect text-white btn-lg" onclick="detectWatermark()">
