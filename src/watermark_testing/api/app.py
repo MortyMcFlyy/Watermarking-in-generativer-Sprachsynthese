@@ -261,6 +261,49 @@ def list_user_files():
         return jsonify({'error': str(e)}), 500
 
 
+# ==========================================
+# SCHNITTSTELLE 6: Datei löschen
+# ==========================================
+@app.route('/files/<int:audio_id>', methods=['DELETE'])
+def delete_audio_file(audio_id: int):
+    """
+    Löscht eine Audio-Datei.
+    - Löscht Datei aus Filesystem
+    - Löscht Eintrag aus DB via Repository
+    """
+    try:
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            
+            # Datei aus DB holen
+            audio_file = audio_repo.get_by_id(audio_id)
+            
+            if not audio_file:
+                return jsonify({'error': 'Datei nicht gefunden'}), 404
+            
+            # TODO: User-Berechtigung prüfen
+            # if audio_file.user_id != current_user_id:
+            #     return jsonify({'error': 'Keine Berechtigung'}), 403
+            
+            # Datei aus Filesystem löschen (falls vorhanden)
+            if os.path.exists(audio_file.file_path):
+                try:
+                    os.remove(audio_file.file_path)
+                except Exception as e:
+                    print(f"Warnung: Konnte Datei nicht löschen: {e}")
+            
+            # Eintrag aus DB löschen via Repository
+            audio_repo.delete(audio_id)
+            
+            return jsonify({
+                'message': 'Datei erfolgreich gelöscht',
+                'deleted_id': audio_id
+            }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # App starten
 if __name__ == '__main__':
     app.run(debug=True, host='localhost', port=5000)

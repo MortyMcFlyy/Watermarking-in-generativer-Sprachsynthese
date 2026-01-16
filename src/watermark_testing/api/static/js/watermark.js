@@ -132,3 +132,185 @@ function detectWatermark() {
         showResult('❌ Fehler: ' + error, true, 'detectResult');
     });
 }
+
+// ==========================================
+// FILES MANAGEMENT
+// ==========================================
+
+/**
+ * Lädt alle Dateien vom Server und zeigt sie an
+ */
+function loadFiles() {
+    const loadingDiv = document.getElementById('filesLoading');
+    const containerDiv = document.getElementById('filesContainer');
+    const errorDiv = document.getElementById('filesError');
+    
+    // Loading anzeigen
+    loadingDiv.style.display = 'block';
+    containerDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    
+    fetch('/files', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        displayFiles(data.files, data.count);
+        
+        // Container anzeigen
+        loadingDiv.style.display = 'none';
+        containerDiv.style.display = 'block';
+    })
+    .catch(error => {
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = '❌ Fehler beim Laden der Dateien: ' + error.message;
+        errorDiv.style.display = 'block';
+    });
+}
+
+/**
+ * Zeigt die Dateiliste an
+ */
+function displayFiles(files, count) {
+    const filesList = document.getElementById('filesList');
+    const fileCount = document.getElementById('fileCount');
+    const noFilesMessage = document.getElementById('noFilesMessage');
+    
+    // Counter aktualisieren
+    fileCount.textContent = `${count} ${count === 1 ? 'File' : 'Files'}`;
+    
+    // Wenn keine Dateien vorhanden
+    if (files.length === 0) {
+        filesList.innerHTML = '';
+        noFilesMessage.style.display = 'block';
+        return;
+    }
+    
+    noFilesMessage.style.display = 'none';
+    
+    // Dateien anzeigen
+    filesList.innerHTML = files.map(file => {
+        const date = new Date(file.created_at);
+        const formattedDate = date.toLocaleDateString('de-DE', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const duration = file.duration ? `${file.duration.toFixed(1)}s` : 'N/A';
+        const watermarkBadge = file.has_watermark 
+            ? `<span class="badge bg-success">${file.watermark_type || 'Watermarked'}</span>`
+            : '<span class="badge bg-secondary">Original</span>';
+        
+        const watermarkIndicator = file.has_watermark
+            ? '<span class="watermark-indicator has-watermark" title="Has watermark"></span>'
+            : '<span class="watermark-indicator no-watermark" title="No watermark"></span>';
+        
+        return `
+            <div class="list-group-item file-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            ${watermarkIndicator}
+                            <strong class="me-2">${escapeHtml(file.filename)}</strong>
+                            ${watermarkBadge}
+                        </div>
+                        <div class="file-metadata">
+                            <span>📅 ${formattedDate}</span>
+                            <span class="ms-3">⏱️ ${duration}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadFile(${file.id}, '${escapeHtml(file.filename)}')">
+                            ⬇️ Download
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id}, '${escapeHtml(file.filename)}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Lädt eine Datei herunter
+ */
+function downloadFile(fileId, filename) {
+    window.location.href = `/download/${fileId}`;
+}
+
+/**
+ * Löscht eine Datei
+ */
+function deleteFile(fileId, filename) {
+    if (!confirm(`Möchtest du die Datei "${filename}" wirklich löschen?`)) {
+        return;
+    }
+    
+    fetch(`/files/${fileId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        // Erfolgsmeldung anzeigen
+        showAlert('success', `✅ Datei "${filename}" wurde erfolgreich gelöscht!`);
+        
+        // Liste neu laden
+        loadFiles();
+    })
+    .catch(error => {
+        showAlert('danger', '❌ Fehler beim Löschen: ' + error.message);
+    });
+}
+
+/**
+ * Zeigt eine Alert-Nachricht an
+ */
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.getElementById('filesContainer');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-remove nach 5 Sekunden
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+/**
+ * Escaped HTML für XSS-Schutz
+ */
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Event Listener: Dateien laden wenn Files-Tab geöffnet wird
+document.getElementById('files-tab').addEventListener('shown.bs.tab', function () {
+    loadFiles();
+});

@@ -1,0 +1,295 @@
+:root {
+    --deep-ocean: #0a2463;
+    --ocean-blue:  #020918;
+    --water-blue: #00adef;
+    --light-water: #60a5fa;
+    --foam: #e0f2fe;
+    --wave: #bfdbfe;
+}
+
+body {
+    background: 
+        linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(51, 65, 85, 0.85) 100%),
+        url("../images/9824059932270.JPG") center/cover no-repeat fixed;
+    min-height: 100vh;
+    padding: 40px 0;
+    font-family: 'Roboto', sans-serif;
+}
+
+.container {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+    border-radius: 20px;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+h1::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--water-blue) 0%, var(--light-water) 100%);
+    border-radius: 2px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 300;
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+/* Navigation Tabs */
+.nav-tabs .nav-link {
+    color: #64748b;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--water-blue);
+    background: var(--foam);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--ocean-blue);
+    background: linear-gradient(to bottom, var(--foam) 0%, white 100%);
+    border-bottom: 3px solid var(--water-blue);
+    font-weight: 600;
+}
+
+/* Upload Section - Clean Card Design */
+.upload-section {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.upload-section:hover {
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+    transform: translateY(-2px);
+}
+
+.upload-section h5 {
+    color: var(--ocean-blue);
+    font-weight: 600;
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+}
+
+/* Buttons */
+.btn-custom {
+    background: linear-gradient(135deg, var(--water-blue) 0%, var(--water-blue) 100%);
+    border: none;
+    padding: 14px 40px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-custom::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-custom:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+}
+
+.btn-detect {
+    background: linear-gradient(135deg, var(--water-blue) 0%, var(--water-blue) 100%);
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.btn-detect:hover {
+    box-shadow: 0 6px 25px rgba(6, 182, 212, 0.4);
+}
+
+/* Form Controls */
+.form-control, .form-select {
+    border: 2px solid var(--wave);
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--water-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: white;
+}
+
+/* Alert Styling */
+.alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border: 1px solid #6ee7b7;
+    color: #065f46;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #fcd34d;
+    color: #92400e;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+}
+
+/* Confidence Badge */
+.confidence-badge {
+    font-size: 2.5rem;
+    font-weight: 700;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Tab Content */
+.tab-content {
+    padding-top: 25px;
+}
+
+/* Detection Result Card */
+.detection-result {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 20px;
+    border: 2px solid var(--wave);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.detection-result h6 {
+    color: var(--ocean-blue);
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.method-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.badge-audioseal {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+}
+
+.badge-perth {
+    background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+    color: #9f1239;
+}
+
+/* Placeholder Content */
+.placeholder-content {
+    background: white;
+    padding: 60px 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.placeholder-content h5 {
+    color: var(--ocean-blue);
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.placeholder-content p {
+    color: #64748b;
+    margin-bottom: 0;
+}
+
+/* Files Tab Styling */
+.file-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.file-item:hover {
+    background: var(--foam) !important;
+    border-left-color: var(--water-blue);
+    transform: translateX(5px);
+}
+
+.file-item .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.file-actions .btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.watermark-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.watermark-indicator.has-watermark {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.watermark-indicator.no-watermark {
+    background: #94a3b8;
+}
+
+.file-metadata {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 5px;
+}
