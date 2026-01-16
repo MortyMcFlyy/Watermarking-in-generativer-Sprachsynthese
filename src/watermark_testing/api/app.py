@@ -1,21 +1,18 @@
+from contextlib import contextmanager
 from flask import Flask, jsonify, request, send_file, render_template
 import os
 import sys
 from pathlib import Path
 
-import numpy as np
-
 # Füge den Parent-Ordner zum Path hinzu
 sys.path.append(str(Path(__file__).parent.parent))
 
-# AudioSeal Imports
-from aimodels.AudioSeal.audioseal_handler import prepare_audio, embed_watermark, detect_watermark, save_audio
-# PerTh Imports
-from aimodels.PerTh.perth_handler import embed_perth_watermark, detect_perth_watermark
-
-from database.database import init_db, SessionLocal
+# Imports
+from database.database import init_db, get_db
 from database.repositories import UserRepository, AudioFileRepository
 from services.audio_service import AudioService
+from services.watermark_business_service import WatermarkBusinessService
+from services.watermark_strategy import WatermarkStrategyFactory
 
 # Flask App 
 app = Flask(__name__)
@@ -28,23 +25,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 init_db()
 
 # ==========================================
-# Dependency Injection - DB Session
-# ==========================================
-def get_db_session():
-    """Context Manager für DB-Sessions"""
-    db = SessionLocal()
-    try:
-        return db
-    finally:
-        db.close()
-
-# ==========================================
 # ROUTES
 # ==========================================
 
 @app.route('/')
 def home():
     return render_template('index.html')
+
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -57,11 +44,12 @@ def health():
 @app.route('/upload', methods=['POST'])
 def upload_audio():
     """
-    Upload einer Audio-Datei
+    Upload einer Audio-Datei.
     - Speichert Datei im Filesystem
     - Extrahiert Metadaten
     - Speichert Eintrag in DB via Repository
     """
+    # Validierung
     if 'audio' not in request.files:
         return jsonify({'error': 'Keine Datei gefunden'}), 400
     
@@ -71,41 +59,31 @@ def upload_audio():
         return jsonify({'error': 'Keine Datei ausgewählt'}), 400
     
     try:
-        # 1. Datei speichern (Service Layer)
-        filename, filepath = AudioService.save_uploaded_file(file, UPLOAD_FOLDER)
-        
-        # 2. Metadaten extrahieren (Service Layer)
-        metadata = AudioService.get_audio_metadata(filepath)
-        
-        # 3. DB-Session holen
-        db = get_db_session()
-        audio_repo = AudioFileRepository(db)
-        
-        # TODO: Aktuell ohne User - später mit Session/Auth
-        # Für jetzt: Dummy User ID = 1 (muss vorher existieren!)
-        user_id = 1  # WICHTIG: User muss in DB existieren
-        
-        # 4. In Datenbank speichern (Repository Layer)
-        audio_file = audio_repo.create(
-            user_id=user_id,
-            filename=filename,
-            file_path=filepath,
-            file_size=metadata['file_size'],
-            sample_rate=metadata['sample_rate'],
-            duration=metadata['duration'],
-            has_watermark=False,
-            watermark_type=None
-        )
+        # Business Logic via Service
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            business_service = WatermarkBusinessService(audio_repo)
+            
+            user_id = 1  # TODO: Aus Session holen
+            
+            result = business_service.upload_audio_workflow(
+                file=file,
+                upload_folder=UPLOAD_FOLDER,
+                user_id=user_id
+            )
         
         return jsonify({
             'message': 'Datei erfolgreich hochgeladen',
-            'audio_id': audio_file.id,
-            'filename': filename,
-            'metadata': metadata
+            'audio_id': result['audio_id'],
+            'filename': result['filename'],
+            'metadata': result['metadata']
         }), 200
         
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # TODO: Proper logging statt Exception-Details an Client
+        return jsonify({'error': f'Interner Serverfehler: {str(e)}'}), 500
 
 
 # ==========================================
@@ -114,76 +92,54 @@ def upload_audio():
 @app.route('/watermark/embed', methods=['POST'])
 def embed():
     """
-    Embed Watermark in Audio
+    Embed Watermark in Audio.
     - Upload + Watermarking (AudioSeal oder PerTh)
     - Speichert Original UND Watermarked in DB
     """
+    # Validierung
     if 'audio' not in request.files:
         return jsonify({'error': 'Keine Datei gefunden'}), 400
     
     file = request.files['audio']
-    method = request.form.get('method', 'audioseal')  # Default: AudioSeal
+    method = request.form.get('method', 'audioseal')
     
     if file.filename == '':
         return jsonify({'error': 'Keine Datei ausgewählt'}), 400
     
-    if method not in ['audioseal', 'perth']:
-        return jsonify({'error': 'Ungültige Methode. Wähle "audioseal" oder "perth"'}), 400
+    # Methoden-Validierung
+    available_methods = WatermarkStrategyFactory.available_methods()
+    if method not in available_methods:
+        return jsonify({
+            'error': f'Ungültige Methode. Verfügbar: {", ".join(available_methods)}'
+        }), 400
     
     try:
-        # 1. Original-Datei speichern
-        filename, input_path = AudioService.save_uploaded_file(file, UPLOAD_FOLDER)
-        original_metadata = AudioService.get_audio_metadata(input_path)
-        
-        # 2. Watermark einbetten - je nach Methode
-        output_filename = f"watermarked_{method}_{filename}"
-        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
-        
-        if method == 'audioseal':
-            audio_tensor, sr = prepare_audio(input_path)
-            watermarked_audio = embed_watermark(audio_tensor, sr)
-            save_audio(watermarked_audio, sr, output_path)
-            watermark_type = 'AudioSeal'
+        # Business Logic via Service
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            business_service = WatermarkBusinessService(audio_repo)
             
-        elif method == 'perth':
-            embed_perth_watermark(input_path, output_path)
-            watermark_type = 'PerTh'
+            user_id = 1  # TODO: Aus Session holen
+            
+            output_path, metadata = business_service.embed_watermark_workflow(
+                file=file,
+                method=method,
+                upload_folder=UPLOAD_FOLDER,
+                user_id=user_id
+            )
         
-        watermarked_metadata = AudioService.get_audio_metadata(output_path)
-        
-        # 3. Beide Dateien in DB speichern
-        db = get_db_session()
-        audio_repo = AudioFileRepository(db)
-        user_id = 1  # TODO: Aus Session holen
-        
-        # Original speichern
-        original_file = audio_repo.create(
-            user_id=user_id,
-            filename=filename,
-            file_path=input_path,
-            file_size=original_metadata['file_size'],
-            sample_rate=original_metadata['sample_rate'],
-            duration=original_metadata['duration'],
-            has_watermark=False,
-            watermark_type=None
+        # Datei zum Download senden
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=metadata['output_filename']
         )
         
-        # Watermarked speichern
-        watermarked_file = audio_repo.create(
-            user_id=user_id,
-            filename=output_filename,
-            file_path=output_path,
-            file_size=watermarked_metadata['file_size'],
-            sample_rate=watermarked_metadata['sample_rate'],
-            duration=watermarked_metadata['duration'],
-            has_watermark=True,
-            watermark_type=watermark_type
-        )
-        
-        return send_file(output_path, as_attachment=True, download_name=output_filename)
-        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # TODO: Proper logging
+        return jsonify({'error': f'Interner Serverfehler: {str(e)}'}), 500
 
 
 # ==========================================
@@ -192,93 +148,49 @@ def embed():
 @app.route('/watermark/detect', methods=['POST'])
 def detect():
     """
-    Detect Watermark in Audio
+    Detect Watermark in Audio.
     - Upload + Detection (AudioSeal oder PerTh)
     - Speichert Detection-Ergebnis in DB
     """
+    # Validierung
     if 'audio' not in request.files:
         return jsonify({'error': 'Keine Datei gefunden'}), 400
     
     file = request.files['audio']
-    method = request.form.get('method', 'audioseal')  # Default: AudioSeal
+    method = request.form.get('method', 'audioseal')
     
     if file.filename == '':
         return jsonify({'error': 'Keine Datei ausgewählt'}), 400
     
-    if method not in ['audioseal', 'perth']:
-        return jsonify({'error': 'Ungültige Methode. Wähle "audioseal" oder "perth"'}), 400
+    # Methoden-Validierung
+    available_methods = WatermarkStrategyFactory.available_methods()
+    if method not in available_methods:
+        return jsonify({
+            'error': f'Ungültige Methode. Verfügbar: {", ".join(available_methods)}'
+        }), 400
     
     try:
-        # 1. Datei speichern
-        filename, input_path = AudioService.save_uploaded_file(file, UPLOAD_FOLDER)
-        metadata = AudioService.get_audio_metadata(input_path)
-        
-        # 2. Detection durchführen - je nach Methode
-        if method == 'audioseal':
-            audio_tensor, sr = prepare_audio(input_path)
-            confidence, message = detect_watermark(audio_tensor, sr)
+        # Business Logic via Service
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            business_service = WatermarkBusinessService(audio_repo)
             
-            # Tensor zu Float konvertieren
-            if hasattr(confidence, 'cpu'):
-                confidence = float(confidence.cpu().detach().numpy())
-            else:
-                confidence = float(confidence)
+            user_id = 1  # TODO: Aus Session holen
             
-            if hasattr(message, 'cpu'):
-                message = message.cpu().detach().numpy().tolist()
-            
-            confidence_percent = confidence * 100
-            detected = bool(confidence_percent >= 50)  # Explizit zu bool
-            watermark_type = 'AudioSeal'
-            watermark_data = None  # AudioSeal gibt kein extrahiertes Watermark zurück
-            
-        elif method == 'perth':
-            watermark, detected = detect_perth_watermark(input_path)
-            detected = bool(detected)  # Explizit zu Python bool konvertieren
-            watermark_type = 'PerTh'
-            watermark_data = watermark
-            # PerTh hat keinen Confidence Score - nur detected True/False
+            detection_result = business_service.detect_watermark_workflow(
+                file=file,
+                method=method,
+                upload_folder=UPLOAD_FOLDER,
+                user_id=user_id
+            )
         
-        # 3. In DB speichern mit Detection-Info
-        db = get_db_session()
-        audio_repo = AudioFileRepository(db)
-        user_id = 1  # TODO: Aus Session
+        return jsonify(detection_result), 200
         
-        audio_file = audio_repo.create(
-            user_id=user_id,
-            filename=filename,
-            file_path=input_path,
-            file_size=metadata['file_size'],
-            sample_rate=metadata['sample_rate'],
-            duration=metadata['duration'],
-            has_watermark=detected,
-            watermark_type=watermark_type if detected else None
-        )
-        
-        response_data = {
-            'detected': detected,
-            'filename': filename,
-            'audio_id': audio_file.id,
-            'method': watermark_type
-        }
-        
-        # Methoden-spezifische Daten
-        if method == 'perth':
-            # PerTh: Nur Watermark-Daten, kein Confidence
-            if watermark_data is not None:
-                if isinstance(watermark_data, np.ndarray):
-                    response_data['watermark'] = watermark_data.tolist()
-                else:
-                    response_data['watermark'] = watermark_data
-        elif method == 'audioseal':
-            # AudioSeal: Hat Confidence Score
-            response_data['confidence'] = confidence_percent
-            response_data['message'] = message
-        
-        return jsonify(response_data), 200
-        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # TODO: Proper logging
+        return jsonify({'error': f'Interner Serverfehler: {str(e)}'}), 500
 
 
 # ==========================================
@@ -287,29 +199,29 @@ def detect():
 @app.route('/download/<int:audio_id>', methods=['GET'])
 def download_audio(audio_id: int):
     """
-    Download einer gespeicherten Audio-Datei
+    Download einer gespeicherten Audio-Datei.
     - Holt Datei-Info aus DB via Repository
     - Sendet Datei an Client
     """
     try:
-        db = get_db_session()
-        audio_repo = AudioFileRepository(db)
-        
-        # Datei aus DB holen
-        audio_file = audio_repo.get_by_id(audio_id)
-        
-        if not audio_file:
-            return jsonify({'error': 'Datei nicht gefunden'}), 404
-        
-        # Prüfen ob Datei existiert
-        if not os.path.exists(audio_file.file_path):
-            return jsonify({'error': 'Datei im Filesystem nicht gefunden'}), 404
-        
-        return send_file(
-            audio_file.file_path,
-            as_attachment=True,
-            download_name=audio_file.filename
-        )
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            
+            # Datei aus DB holen
+            audio_file = audio_repo.get_by_id(audio_id)
+            
+            if not audio_file:
+                return jsonify({'error': 'Datei nicht gefunden'}), 404
+            
+            # Prüfen ob Datei existiert
+            if not os.path.exists(audio_file.file_path):
+                return jsonify({'error': 'Datei im Filesystem nicht gefunden'}), 404
+            
+            return send_file(
+                audio_file.file_path,
+                as_attachment=True,
+                download_name=audio_file.filename
+            )
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -321,29 +233,29 @@ def download_audio(audio_id: int):
 @app.route('/files', methods=['GET'])
 def list_user_files():
     """
-    Gibt alle Audio-Dateien eines Users zurück
+    Gibt alle Audio-Dateien eines Users zurück.
     """
     try:
-        db = get_db_session()
-        audio_repo = AudioFileRepository(db)
-        user_id = 1  # TODO: Aus Session
-        
-        files = audio_repo.get_by_user(user_id)
-        
-        return jsonify({
-            'count': len(files),
-            'files': [
-                {
-                    'id': f.id,
-                    'filename': f.filename,
-                    'has_watermark': f.has_watermark,
-                    'watermark_type': f.watermark_type,
-                    'duration': f.duration,
-                    'created_at': f.created_at.isoformat()
-                }
-                for f in files
-            ]
-        }), 200
+        with get_db() as db:
+            audio_repo = AudioFileRepository(db)
+            user_id = 1  # TODO: Aus Session
+            
+            files = audio_repo.get_by_user(user_id)
+            
+            return jsonify({
+                'count': len(files),
+                'files': [
+                    {
+                        'id': f.id,
+                        'filename': f.filename,
+                        'has_watermark': f.has_watermark,
+                        'watermark_type': f.watermark_type,
+                        'duration': f.duration,
+                        'created_at': f.created_at.isoformat()
+                    }
+                    for f in files
+                ]
+            }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

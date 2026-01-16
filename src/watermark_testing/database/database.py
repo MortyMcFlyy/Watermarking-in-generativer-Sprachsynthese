@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from pathlib import Path
+from contextlib import contextmanager
 from .models import Base
 
 # ==========================================
@@ -29,8 +30,17 @@ def init_db():
     print(f"✓ Datenbank initialisiert: {DATABASE_URL}")
 
 
+@contextmanager
 def get_db():
-    """Dependency für DB-Sessions"""
+    """
+    Context Manager für DB-Sessions.
+    Stellt sicher, dass Sessions korrekt geschlossen werden.
+    
+    Usage:
+        with get_db() as db:
+            user_repo = UserRepository(db)
+            user = user_repo.get_by_id(1)
+    """
     db = SessionLocal()
     try:
         yield db
