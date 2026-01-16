@@ -26,3 +26,8 @@ flask>=3.0.0
 flask-cors
 werkzeug
 python-multipart
+
+#Manipluation:
+scipy>=1.10.0
+pydub>=0.25.0
+soundfile>=0.12.0

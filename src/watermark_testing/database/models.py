@@ -35,3 +35,35 @@ class AudioFile(Base):
     
     # Relationship zu User
     user = relationship("User", back_populates="audio_files")
+
+
+class ManipulatedAudioFile(Base):
+    __tablename__ = "manipulated_audio_files"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    original_audio_id = Column(Integer, ForeignKey("audio_files.id"), nullable=True)  # Optional: Link zum Original
+    
+    # File Info
+    filename = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer)  # in Bytes
+    
+    # Audio Metadata
+    sample_rate = Column(Integer)
+    duration = Column(Float)  # in Sekunden
+    
+    # Manipulation Info
+    manipulation_type = Column(String(50), nullable=False)  # 'noise', 'compression', etc.
+    manipulation_parameters = Column(String(500))  # JSON-String mit Parametern
+    
+    # Watermark Info (falls vorhanden)
+    had_watermark = Column(Boolean, default=False)  # War im Original ein Watermark?
+    watermark_type = Column(String(50))  # z.B. "AudioSeal", "PerTh"
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User")
+    original_audio = relationship("AudioFile", foreign_keys=[original_audio_id])

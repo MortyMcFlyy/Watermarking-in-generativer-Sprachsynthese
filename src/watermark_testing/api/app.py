@@ -9,10 +9,14 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Imports
 from database.database import init_db, get_db
-from database.repositories import UserRepository, AudioFileRepository
+from database.repositories import UserRepository, AudioFileRepository, ManipulatedAudioFileRepository
 from services.audio_service import AudioService
 from services.watermark_business_service import WatermarkBusinessService
 from services.watermark_strategy import WatermarkStrategyFactory
+from services.audio_manipulation_service import AudioManipulationService
+import json
+import uuid
+
 
 # Flask App 
 app = Flask(__name__)
@@ -300,6 +304,123 @@ def delete_audio_file(audio_id: int):
                 'deleted_id': audio_id
             }), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==========================================
+# SCHNITTSTELLE 7: Audio Manipulation
+# ==========================================
+@app.route('/manipulation/apply', methods=['POST'])
+def apply_manipulation():
+    """
+    Wendet eine Manipulation auf eine Audio-Datei an.
+    - Upload + Manipulation
+    - Speichert manipulierte Datei in DB
+    """
+    # Validierung
+    if 'audio' not in request.files:
+        return jsonify({'error': 'Keine Datei gefunden'}), 400
+    
+    file = request.files['audio']
+    manipulation_type = request.form.get('manipulation_type')
+    parameters_json = request.form.get('parameters', '{}')
+    
+    if file.filename == '':
+        return jsonify({'error': 'Keine Datei ausgewählt'}), 400
+    
+    if not manipulation_type:
+        return jsonify({'error': 'Manipulation-Typ fehlt'}), 400
+    
+    try:
+        # Parameter parsen
+        parameters = json.loads(parameters_json)
+        
+        # Temporäre Datei speichern
+        AudioService.validate_audio_file(file)
+        temp_filename = f"temp_{uuid.uuid4().hex}_{file.filename}"
+        temp_path = os.path.join(UPLOAD_FOLDER, temp_filename)
+        file.save(temp_path)
+        
+        # Output-Dateiname
+        output_filename = f"manipulated_{manipulation_type}_{file.filename}"
+        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+        
+        # Manipulation anwenden
+        metadata = AudioManipulationService.apply_manipulation(
+            manipulation_type=manipulation_type,
+            audio_path=temp_path,
+            output_path=output_path,
+            parameters=parameters
+        )
+        
+        # Metadaten ergänzen
+        file_size = os.path.getsize(output_path)
+        
+        # In Datenbank speichern
+        with get_db() as db:
+            manipulated_repo = ManipulatedAudioFileRepository(db)
+            user_id = 1  # TODO: Aus Session
+            
+            manipulated_audio = manipulated_repo.create(
+                user_id=user_id,
+                filename=output_filename,
+                file_path=output_path,
+                file_size=file_size,
+                sample_rate=metadata['sample_rate'],
+                duration=metadata['duration'],
+                manipulation_type=manipulation_type,
+                manipulation_parameters=parameters
+            )
+        
+        # Temp-Datei löschen
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
+        # Manipulierte Datei zum Download senden
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=output_filename
+        )
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Interner Serverfehler: {str(e)}'}), 500
+
+
+# ==========================================
+# SCHNITTSTELLE 8: Liste aller manipulierten Dateien
+# ==========================================
+@app.route('/manipulation/list', methods=['GET'])
+def list_manipulated_files():
+    """
+    Gibt alle manipulierten Audio-Dateien eines Users zurück.
+    """
+    try:
+        with get_db() as db:
+            manipulated_repo = ManipulatedAudioFileRepository(db)
+            user_id = 1  # TODO: Aus Session
+            
+            files = manipulated_repo.get_by_user(user_id)
+            
+            return jsonify({
+                'count': len(files),
+                'files': [
+                    {
+                        'id': f.id,
+                        'filename': f.filename,
+                        'file_size': f.file_size,
+                        'duration': f.duration,
+                        'manipulation_type': f.manipulation_type,
+                        'parameters': json.loads(f.manipulation_parameters),
+                        'created_at': f.created_at.isoformat()
+                    }
+                    for f in files
+                ]
+            }), 200
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

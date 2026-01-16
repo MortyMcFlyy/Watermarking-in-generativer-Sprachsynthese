@@ -133,6 +133,37 @@ h1::after {
     box-shadow: 0 6px 25px rgba(6, 182, 212, 0.4);
 }
 
+/* Manipulation Button Style */
+.btn-manipulation {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.btn-manipulation:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+/* Parameter Input Styling */
+.param-group {
+    background: var(--foam);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 3px solid var(--water-blue);
+}
+
+.param-group label {
+    color: var(--ocean-blue);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.param-value-display {
+    font-weight: 600;
+    color: var(--water-blue);
+}
+
 /* Form Controls */
 .form-control, .form-select {
     border: 2px solid var(--wave);

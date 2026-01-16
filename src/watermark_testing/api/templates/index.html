@@ -39,9 +39,10 @@
                     Files
                 </button>
             </li>
+        
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="bulk-tab" data-bs-toggle="tab" data-bs-target="#bulk" type="button" role="tab">
-                    Bulk
+                <button class="nav-link" id="manipulation-tab" data-bs-toggle="tab" data-bs-target="#manipulation" type="button" role="tab">
+                     Manipulation
                 </button>
             </li>
         </ul>
@@ -135,13 +136,45 @@
                 </div>
             </div>
 
-            <!-- Bulk Tab -->
-            <div class="tab-pane fade" id="bulk" role="tabpanel">
-                <div class="placeholder-content">
-                    <h5>⚡ Bulk Operations</h5>
-                    <p>Process multiple audio files at once</p>
-                    <p class="text-muted mt-3"><em>Coming soon...</em></p>
+         
+
+            <!-- Manipulation Tab -->
+            <div class="tab-pane fade" id="manipulation" role="tabpanel">
+                <div class="upload-section">
+                    <h5>🎛️ Audio Manipulation Testing</h5>
+                    <p class="text-muted mb-4">Apply various manipulations to test watermark robustness</p>
+                    
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label for="manipulationFile" class="form-label fw-semibold">Audio File</label>
+                        <input type="file" id="manipulationFile" accept="audio/*" class="form-control">
+                    </div>
+
+                    <!-- Manipulation Type Selection -->
+                    <div class="mb-4">
+                        <label for="manipulationType" class="form-label fw-semibold">Manipulation Type</label>
+                        <select id="manipulationType" class="form-select" onchange="updateManipulationParameters()">
+                            <option value="noise">Additive Noise</option>
+                            <option value="compression">Compression (MP3)</option>
+                            <option value="gain">Gain/Volume</option>
+                            <option value="resample">Resampling</option>
+                            <option value="lowpass">Lowpass Filter</option>
+                            <option value="highpass">Highpass Filter</option>
+                            <option value="timestretch">Time Stretch</option>
+                            <option value="pitchshift">Pitch Shift</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Parameters Section -->
+                    <div id="manipulationParameters" class="mb-4">
+                        <!-- Parameters werden dynamisch basierend auf Manipulation Type eingefügt -->
+                    </div>
+
+                    <button class="btn btn-custom btn-manipulation text-white btn-lg" onclick="applyManipulation()">
+                        Apply Manipulation
+                    </button>
                 </div>
+                <div id="manipulationResult"></div>
             </div>
         </div>
     </div>
