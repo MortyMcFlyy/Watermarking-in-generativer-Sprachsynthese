@@ -192,7 +192,7 @@ function displayFiles(files, count) {
     
     noFilesMessage.style.display = 'none';
     
-    // Dateien anzeigen
+    // Dateien anzeigen - WICHTIG: data-* Attribute statt inline onclick mit String-Parametern!
     filesList.innerHTML = files.map(file => {
         const date = new Date(file.created_at);
         const formattedDate = date.toLocaleDateString('de-DE', {
@@ -205,7 +205,7 @@ function displayFiles(files, count) {
         
         const duration = file.duration ? `${file.duration.toFixed(1)}s` : 'N/A';
         const watermarkBadge = file.has_watermark 
-            ? `<span class="badge bg-success">${file.watermark_type || 'Watermarked'}</span>`
+            ? `<span class="badge bg-success">${escapeHtml(file.watermark_type || 'Watermarked')}</span>`
             : '<span class="badge bg-secondary">Original</span>';
         
         const watermarkIndicator = file.has_watermark
@@ -227,10 +227,10 @@ function displayFiles(files, count) {
                         </div>
                     </div>
                     <div class="file-actions">
-                        <button class="btn btn-sm btn-outline-primary" onclick="downloadFile(${file.id}, '${escapeHtml(file.filename)}')">
+                        <button class="btn btn-sm btn-outline-primary" data-file-id="${file.id}" data-action="download">
                             ⬇️ Download
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteFile(${file.id}, '${escapeHtml(file.filename)}')">
+                        <button class="btn btn-sm btn-outline-danger" data-file-id="${file.id}" data-filename="${escapeHtml(file.filename)}" data-action="delete">
                             🗑️ Delete
                         </button>
                     </div>
@@ -238,12 +238,33 @@ function displayFiles(files, count) {
             </div>
         `;
     }).join('');
+    
+    // Event Delegation: Alle Button-Klicks in der Liste abfangen
+    filesList.addEventListener('click', handleFileAction);
+}
+
+/**
+ * Event Handler für Download/Delete Aktionen
+ */
+function handleFileAction(event) {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    const fileId = parseInt(button.dataset.fileId);
+    
+    if (action === 'download') {
+        downloadFile(fileId);
+    } else if (action === 'delete') {
+        const filename = button.dataset.filename;
+        deleteFile(fileId, filename);
+    }
 }
 
 /**
  * Lädt eine Datei herunter
  */
-function downloadFile(fileId, filename) {
+function downloadFile(fileId) {
     window.location.href = `/download/${fileId}`;
 }
 
@@ -300,6 +321,7 @@ function showAlert(type, message) {
  * Escaped HTML für XSS-Schutz
  */
 function escapeHtml(text) {
+    if (!text) return '';
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -307,7 +329,7 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
 // Event Listener: Dateien laden wenn Files-Tab geöffnet wird
