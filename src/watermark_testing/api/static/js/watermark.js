@@ -434,9 +434,9 @@ function updateManipulationParameters() {
                     <label for="pitchSteps" class="form-label">
                         Pitch Shift: <span class="param-value-display" id="pitchDisplay">0 semitones</span>
                     </label>
-                    <input type="range" class="form-range" id="pitchSteps" min="-12" max="12" value="0" step="1" 
-                           oninput="document.getElementById('pitchDisplay').textContent = this.value + ' semitones'">
-                    <small class="text-muted">12 semitones = 1 octave</small>
+                    <input type="range" class="form-range" id="pitchSteps" min="-2" max="2" value="0" step="0.125" 
+                           oninput="updatePitchDisplay(this.value)">
+                    <small class="text-muted">0.125 = 1/8 semitone (12.5 cents) | 0.25 = quarter tone | 0.5 = half semitone</small>
                 </div>
             `;
             break;
@@ -516,7 +516,7 @@ function getManipulationParameters(type) {
             params.rate = document.getElementById('timeStretchRate')?.value || 1.0;
             break;
         case 'pitchshift':
-            params.steps = document.getElementById('pitchSteps')?.value || 0;
+            params.steps = parseFloat(document.getElementById('pitchSteps')?.value || 0);
             break;
     }
     
@@ -527,3 +527,30 @@ function getManipulationParameters(type) {
 document.addEventListener('DOMContentLoaded', function() {
     updateManipulationParameters();
 });
+
+function updatePitchDisplay(value) {
+    const numValue = parseFloat(value);
+    const displayEl = document.getElementById('pitchDisplay');
+    
+    // Formatierung für schönere Anzeige
+    let displayText = '';
+    
+    if (numValue === 0) {
+        displayText = '0 semitones';
+    } else if (numValue % 1 === 0) {
+        // Ganze Halbtöne
+        displayText = `${numValue > 0 ? '+' : ''}${numValue} semitone${Math.abs(numValue) !== 1 ? 's' : ''}`;
+    } else if (numValue % 0.5 === 0) {
+        // Vierteltöne (0.5)
+        displayText = `${numValue > 0 ? '+' : ''}${numValue} semitones (quarter tone)`;
+    } else if (numValue % 0.25 === 0) {
+        // Achteltöne (0.25, 0.75)
+        displayText = `${numValue > 0 ? '+' : ''}${numValue} semitones (eighth tone)`;
+    } else {
+        // Mikrotöne (0.125, 0.375, etc.)
+        const cents = Math.round(numValue * 100); // 1 semitone = 100 cents
+        displayText = `${numValue > 0 ? '+' : ''}${numValue} semitones (${cents > 0 ? '+' : ''}${cents} cents)`;
+    }
+    
+    displayEl.textContent = displayText;
+}

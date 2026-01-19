@@ -228,23 +228,38 @@ class AudioManipulationService:
         }
     
     @staticmethod
-    def pitch_shift(audio_path: str, output_path: str, n_steps: int = 0) -> Dict:
+    def pitch_shift(audio_path: str, output_path: str, n_steps: float = 0) -> Dict:
         """
         Ändert Pitch ohne Tempo zu ändern.
         
         Args:
             audio_path: Pfad zur Original-Datei
             output_path: Pfad für Output
-            n_steps: Anzahl Halbtöne (12 = 1 Oktave)
-        
+            n_steps: Anzahl Halbtöne (float für Mikrotöne)
+    
         Returns:
             Dict mit Metadaten
         """
-        audio, sr = librosa.load(audio_path, sr=None)
-        
-        # Pitch-Shift
-        shifted = librosa.effects.pitch_shift(audio, sr=sr, n_steps=n_steps)
-        
+        try:
+            # Versuch 1: pyrubberband (beste Qualität)
+            import pyrubberband as pyrb
+            audio, sr = librosa.load(audio_path, sr=None)
+            shifted = pyrb.pitch_shift(audio, sr, n_steps)
+            
+        except ImportError:
+            # Fallback: librosa mit besten Parametern
+            print("⚠️ pyrubberband nicht installiert - nutze librosa (schlechtere Qualität)")
+            audio, sr = librosa.load(audio_path, sr=None)
+            shifted = librosa.effects.pitch_shift(
+                audio, 
+                sr=sr, 
+                n_steps=n_steps,
+                bins_per_octave=36,
+                n_fft=4096,
+                hop_length=512,
+                res_type='kaiser_best'
+            )
+    
         sf.write(output_path, shifted, sr)
         
         return {
@@ -291,7 +306,7 @@ class AudioManipulationService:
                 audio_path, output_path, float(parameters.get('rate', 1.0))
             ),
             'pitchshift': lambda: AudioManipulationService.pitch_shift(
-                audio_path, output_path, int(parameters.get('steps', 0))
+                audio_path, output_path, float(parameters.get('steps', 0))  # float statt int!
             ),
         }
         
