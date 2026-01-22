@@ -16,7 +16,7 @@ Im Rahmen meines Studiums an der Hochschule Osnabrück.
 git clone <repository-url>
 cd Bachelor_Arbeit
 
-# 2. Container bauen und starten (dauert beim ersten Mal 3-5 Minuten je nach Hardware auch länger)
+# 2. Container bauen und starten (dauert beim ersten Mal einige Minuten je nach Hardware auch länger(ohne GPU deutlich länger)
 
 docker-compose up --build
 
