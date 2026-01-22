@@ -1,7 +1,8 @@
-#AudioSeal:
+# ==========================================
+# AudioSeal Dependencies
+# ==========================================
 audioseal
-Python >= 3.8
-Pytorch >= 1.13.0
+torch >= 1.13.0
 Omegaconf
 Julius
 Numpy
@@ -12,22 +13,26 @@ Numpy
 resemble_perth
 matplotlib
 librosa
-torch
 torchaudio
 
-#Database:
+# ==========================================
+# Database
+# ==========================================
 sqlalchemy>=2.0.0
 alembic
 psycopg2-binary  # Für PostgreSQL (oder sqlite3 für SQLite)
 
-
-#Flask
+# ==========================================
+# Flask + API
+# ==========================================
 flask>=3.0.0
 flask-cors
 werkzeug
 python-multipart
 
-#Manipluation:
+# ==========================================
+# Audio Manipulation
+# ==========================================
 scipy>=1.10.0
 pydub>=0.25.0
 soundfile>=0.12.0

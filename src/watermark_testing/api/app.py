@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from flask import Flask, jsonify, request, send_file, render_template
+from flask_cors import CORS
 import os
 import sys
 from pathlib import Path
@@ -20,9 +21,10 @@ import uuid
 
 # Flask App 
 app = Flask(__name__)
+CORS(app)
 
 # Upload-Ordner erstellen
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = '/app/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Datenbank initialisieren beim Start
@@ -427,4 +429,5 @@ def list_manipulated_files():
 
 # App starten
 if __name__ == '__main__':
-    app.run(debug=True, host='localhost', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+    #Localhost sonst 0.0.0.0 für Docker
