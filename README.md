@@ -5,7 +5,7 @@ Im Rahmen meines Studiums an der Hochschule Osnabrück.
 
 ## Quick Start mit Docker:
 ### Voraussetzungen
-
+- [GPU]
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installiert und gestartet
 - Git (optional, zum Klonen)
 
@@ -16,7 +16,7 @@ Im Rahmen meines Studiums an der Hochschule Osnabrück.
 git clone <repository-url>
 cd Bachelor_Arbeit
 
-# 2. Container bauen und starten (dauert beim ersten Mal einige Minuten je nach Hardware auch länger(ohne GPU deutlich länger)
+# 2. Container bauen und starten (dauert beim ersten Mal einige Minuten je nach Hardware auch länger
 
 docker-compose up --build
 
