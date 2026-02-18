@@ -1,5 +1,5 @@
-# Bachelor_Arbeit
-Im Rahmen meines Studiums an der Hochschule Osnabrück. 
+# Testanwendung für Audio-Watermarks 
+Im Rahmen meiner Bachelorarbeit an der Hochschule Osnabrück. 
 
 
 
